@@ -2,6 +2,8 @@
 
 Configurable draft document email notifications for Frappe.
 
+独立仓库为 [yueweiit/deeplinkerp-draft_notifications](https://github.com/yueweiit/deeplinkerp-draft_notifications)，开发主线和 PR 目标均为 `main`。Frappe App 名保持 `draft_notifications`。
+
 ## What It Does
 
 Draft Notifications sends email after a configured document event. Existing rules default to
