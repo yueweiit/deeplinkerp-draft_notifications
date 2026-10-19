@@ -212,11 +212,11 @@ def send_ding_message(config_name, receiver_user_ids, content, remind_type=None)
 def send_private_chat_notification(doc, rule, receiver_users=None, content=None):
 	config_name = rule.get("dingtalk_config")
 	if not config_name:
-		raise ValueError(f"DingTalk Robot Config is required for rule {rule.name}.")
+		raise ValueError(_("DingTalk Robot Config is required for rule {0}.").format(rule.name))
 
 	config = get_dingtalk_config(config_name)
 	if not config:
-		raise DingTalkAPIError(f"No enabled DingTalk Robot Config found: {config_name}")
+		raise DingTalkAPIError(_("No enabled DingTalk Robot Config found: {0}").format(config_name))
 
 	receivers = get_dingtalk_receivers(config_name, receiver_users=receiver_users, _config=config)
 	if not receivers:

@@ -143,3 +143,16 @@ Send,发送
 Sent.,已发送。
 unknown error,未知错误
 View,查看
+Chinese DingTalk private chat template. Used when recipient language starts with zh. Use {{ doc.fieldname }} to read document fields and {{ doc_url }} for the document link.,中文钉钉私聊模板。当收件人语言以 zh 开头时使用。使用 {{ doc.fieldname }} 读取单据字段，使用 {{ doc_url }} 获取单据链接。
+"Chinese Jinja template. Used when recipient language starts with zh. Use {{ doc.fieldname }} to read document fields, {{ doc.name }} for the document number, and {{ doc_url }} for the document link.",中文 Jinja 模板。当收件人语言以 zh 开头时使用。使用 {{ doc.fieldname }} 读取单据字段，使用 {{ doc.name }} 获取单据编号，使用 {{ doc_url }} 获取单据链接。
+Document,文档
+English DingTalk private chat template. Used when recipient language starts with en. Use {{ doc.fieldname }} to read document fields and {{ doc_url }} for the document link.,英文钉钉私聊模板。当收件人语言以 en 开头时使用。使用 {{ doc.fieldname }} 读取单据字段，使用 {{ doc_url }} 获取单据链接。
+"English Jinja template. Used when recipient language starts with en. Use {{ doc.fieldname }} to read document fields, {{ doc.name }} for the document number, and {{ doc_url }} for the document link.",英文 Jinja 模板。当收件人语言以 en 开头时使用。使用 {{ doc.fieldname }} 读取单据字段，使用 {{ doc.name }} 获取单据编号，使用 {{ doc_url }} 获取单据链接。
+"Jinja template. Available variables: doc, doc_url, doc_type, doc_name. Use {{ doc.fieldname }} to read a field from the current document. Example: {{ doc.name }} - {{ doc.supplier }}.",Jinja 模板。可用变量：doc、doc_url、doc_type、doc_name。使用 {{ doc.fieldname }} 读取当前单据字段。例如：{{ doc.name }} - {{ doc.supplier }}。
+Jinja template. Use {{ doc.fieldname }} to read fields from the current document. This subject is used when the recipient language starts with en.,Jinja 模板。使用 {{ doc.fieldname }} 读取当前单据字段。当收件人语言以 en 开头时使用此主题。
+Jinja template. Use {{ doc.fieldname }} to read fields from the current document. This subject is used when the recipient language starts with es.,Jinja 模板。使用 {{ doc.fieldname }} 读取当前单据字段。当收件人语言以 es 开头时使用此主题。
+Jinja template. Use {{ doc.fieldname }} to read fields from the current document. This subject is used when the recipient language starts with zh.,Jinja 模板。使用 {{ doc.fieldname }} 读取当前单据字段。当收件人语言以 zh 开头时使用此主题。
+"Jinja template. You can use {{ doc.fieldname }} to read a field from the current document, {{ doc.name }} for the document number, {{ doc_url }} for its link, and {{ doc_type }} for the document type. Example: {{ doc.supplier }} - {{ doc.name }}.",Jinja 模板。可以使用 {{ doc.fieldname }} 读取当前单据字段，使用 {{ doc.name }} 获取单据编号，使用 {{ doc_url }} 获取单据链接，使用 {{ doc_type }} 获取单据类型。例如：{{ doc.supplier }} - {{ doc.name }}。
+Pending,待处理
+Spanish DingTalk private chat template. Used when recipient language starts with es. Use {{ doc.fieldname }} to read document fields and {{ doc_url }} for the document link.,西班牙语钉钉私聊模板。当收件人语言以 es 开头时使用。使用 {{ doc.fieldname }} 读取单据字段，使用 {{ doc_url }} 获取单据链接。
+"Spanish Jinja template. Used when recipient language starts with es. Use {{ doc.fieldname }} to read document fields, {{ doc.name }} for the document number, and {{ doc_url }} for the document link.",西班牙语 Jinja 模板。当收件人语言以 es 开头时使用。使用 {{ doc.fieldname }} 读取单据字段，使用 {{ doc.name }} 获取单据编号，使用 {{ doc_url }} 获取单据链接。
