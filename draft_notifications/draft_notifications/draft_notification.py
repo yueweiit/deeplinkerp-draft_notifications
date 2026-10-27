@@ -129,7 +129,7 @@ def send_for_rule(doc, rule):
 	channel = get_notification_channel(rule)
 	candidates = []
 
-	if channel_uses_frappe_users(channel) or channel_uses_dingtalk_private_chat(channel):
+	if channel_uses_frappe_users(channel) or channel_uses_dingtalk(channel):
 		try:
 			candidates = get_candidate_users(doc, rule)
 		except Exception:
@@ -155,149 +155,162 @@ def send_for_rule(doc, rule):
 				create_log(doc, rule, user=user, status="Failed", reason=traceback, notification_channel=channel)
 				frappe.log_error(title=f"Draft notification failed for user {user}", message=traceback)
 
-	if channel_uses_dingtalk_private_chat(channel):
+	if channel_uses_dingtalk(channel):
 		send_dingtalk_private_chat_for_rule(doc, rule, receiver_users=candidates)
 
 
 def send_to_user(
-	doc,
-	rule,
-	user,
-	ignore_deduplicate=False,
-	send_email=True,
-	send_desk=True,
-	notification_channel=None,
+	doc, rule, user, ignore_deduplicate=False, send_email=True, send_desk=True,
+	notification_channel=None, retry_of=None,
 ):
+	if not frappe.db.has_column(LOG_DOCTYPE, "delivery_channel"):
+		frappe.throw(_("Notification log schema is outdated. Please migrate the site before sending notifications."))
+	# Each transport owns its outcome. A Desk failure must not prevent email queueing.
+	results = []
+	for channel, enabled in (("Desk", send_desk), ("Email", send_email)):
+		if enabled:
+			results.append(send_user_channel(
+				doc, rule, user, channel, notification_channel or get_notification_channel(rule),
+				ignore_deduplicate=ignore_deduplicate, retry_of=retry_of,
+			))
+	return results[-1] if results else None
+
+
+def send_user_channel(doc, rule, user, channel, notification_channel, ignore_deduplicate=False, retry_of=None):
+	if retry_of:
+		previous = get_retry_attempt(retry_of, channel, user=user)
+		if previous:
+			return previous
 	user_data = get_enabled_user_data(user)
-	if not user_data:
-		return create_log(
-			doc,
-			rule,
-			user=user,
-			status="Skipped",
-			reason="User is disabled or missing",
-			notification_channel=notification_channel,
-		)
-
-	user_email = user_data.email
-	if send_email and not user_email:
-		return create_log(
-			doc,
-			rule,
-			user=user,
-			status="Skipped",
-			reason="User has no email",
-			notification_channel=notification_channel,
-		)
-
-	if not ignore_deduplicate and rule.deduplicate and already_sent(doc, rule, user):
-		return create_log(
-			doc,
-			rule,
-			user=user,
-			email=user_email,
-			status="Skipped",
-			reason="Already sent",
-			notification_channel=notification_channel,
-		)
-
-	if rule.respect_permissions and not can_read_doc(doc, user):
-		return create_log(
-			doc,
-			rule,
-			user=user,
-			email=user_email,
-			status="Skipped",
-			reason="No read permission",
-			notification_channel=notification_channel,
-		)
+	log_values = {
+		"user": user, "notification_channel": notification_channel,
+		"delivery_channel": channel, "retry_of": retry_of,
+	}
+	reason = get_recipient_skip_reason(doc, rule, user, user_data, send_email=channel == "Email")
+	if reason:
+		return create_log(doc, rule, status="Skipped", reason=reason, **log_values)
+	log_values["email"] = user_data.email
+	if not ignore_deduplicate and rule.deduplicate and already_sent(doc, rule, user, channel):
+		return create_log(doc, rule, status="Skipped", reason=_("Already sent"), **log_values)
 
 	try:
 		language = get_user_language(user)
 		subject = render_subject(doc, rule, language)
 		message = render_message(doc, rule, language)
-
-		if send_desk:
-			create_desk_notification(doc, rule, user, user_email, subject, message)
-
-		if not send_email:
-			return create_log(
-				doc,
-				rule,
-				user=user,
-				email=user_email,
-				status="Sent",
-				notification_channel=notification_channel,
-			)
-
+		if channel == "Desk":
+			create_desk_notification(doc, rule, user, user_data.email, subject, message)
+			return create_log(doc, rule, status="Sent", **log_values)
 		email_queue = frappe.sendmail(
-			recipients=[user_email],
-			subject=subject,
-			message=message,
-			reference_doctype=doc.doctype,
-			reference_name=doc.name,
-			delayed=True,
+			recipients=[user_data.email], subject=subject, message=message,
+			reference_doctype=doc.doctype, reference_name=doc.name, delayed=True,
 		)
-		log = create_log(
-			doc,
-			rule,
-			user=user,
-			email=user_email,
-			status="Queued",
-			email_queue=email_queue.name if email_queue else None,
-			notification_channel=notification_channel,
-		)
+		log = create_log(doc, rule, status="Queued", email_queue=email_queue.name if email_queue else None, **log_values)
 		queue_log_sync_after_commit(log)
 		return log
 	except Exception:
 		traceback = frappe.get_traceback()
-		frappe.log_error(title=f"Draft notification send failed: {doc.doctype} {doc.name}", message=traceback)
-		return create_log(
-			doc,
-			rule,
-			user=user,
-			email=user_email,
-			status="Failed",
-			reason=traceback,
-			notification_channel=notification_channel,
-		)
+		frappe.log_error(title=f"Draft notification {channel} send failed: {doc.doctype} {doc.name}", message=traceback)
+		return create_log(doc, rule, status="Failed", reason=traceback, **log_values)
 
 
-def send_dingtalk_private_chat_for_rule(doc, rule, receiver_users=None):
-	from draft_notifications.dingtalk_robot import send_private_chat_notification
+def send_dingtalk_private_chat_for_rule(doc, rule, receiver_users=None, target_id=None, retry_of=None):
+	from draft_notifications.dingtalk_robot import get_dingtalk_receivers, send_private_chat_notification
 
+	logs = {}
+	delivery_channel = "DingTalk Group" if channel_uses_group(get_notification_channel(rule)) else "DingTalk Private Chat"
+	if delivery_channel == "DingTalk Group":
+		from draft_notifications.dingtalk_group import get_group_receivers as get_dingtalk_receivers
 	try:
-		result = send_private_chat_notification(doc, rule, receiver_users=receiver_users)
-		if not result:
-			return None
+		if not all(frappe.db.has_column(LOG_DOCTYPE, field) for field in ("dingtalk_user_id", "dingtalk_config", "retry_of", "delivery_channel")):
+			frappe.throw(_("Notification log schema is outdated. Please migrate the site before sending DingTalk notifications."))
+		# Serialize eligibility checks and sends for this rule, including manual retries.
+		frappe.db.get_value(RULE_DOCTYPE, rule.name, "name", for_update=True)
+		if receiver_users is None:
+			receiver_users = get_candidate_users(doc, rule)
+		receivers = get_dingtalk_receivers(rule.dingtalk_config, receiver_users=receiver_users)
+		# Preserve the complete group audience before targeting, permission skips or deduplication.
+		summary_receivers = receivers
+		if target_id:
+			receivers = [receiver for receiver in receivers if receiver["user_id"] == target_id]
+		if not receivers:
+			return create_log(doc, rule, status="Skipped", reason=_("No eligible DingTalk recipients found."),
+				notification_channel=delivery_channel, retry_of=retry_of)
 
-		results = result if isinstance(result, list) else [result]
-		failed_results = [item for item in results if item.get("failed_list")]
-		status = "Failed" if failed_results else "Sent"
-		reason = json.dumps(failed_results, ensure_ascii=False) if failed_results else None
-		return create_log(
-			doc,
-			rule,
-			status=status,
-			reason=reason,
-			notification_channel="DingTalk Private Chat",
-			dingtalk_status=status,
-			dingtalk_open_ding_id="",
-			dingtalk_error=reason,
-		)
+		eligible = []
+		for receiver in receivers:
+			user = receiver.get("user")
+			reason = None
+			if receiver.get("unbound"):
+				reason = _("Group mentions require a DingTalk UserId or mobile number.")
+			elif receiver.get("ambiguous"):
+				reason = _("DingTalk UserId is linked to multiple ERP users.")
+			elif user:
+				reason = get_recipient_skip_reason(doc, rule, user, receiver if receiver.get("enabled") else None)
+			elif rule.respect_permissions:
+				reason = _("No read permission")
+			if not reason and (rule.deduplicate or retry_of) and already_sent_dingtalk(doc, rule, receiver["user_id"], delivery_channel):
+				reason = _("Already sent")
+			log = create_log(
+				doc, rule, user=user, status="Skipped" if reason else "Queued", reason=reason,
+				notification_channel=delivery_channel, dingtalk_user_id=receiver["user_id"],
+				dingtalk_config=rule.dingtalk_config, retry_of=retry_of,
+			)
+			if not log:
+				raise RuntimeError("Failed to persist DingTalk recipient log; no message sent")
+			if not reason:
+				logs[receiver["user_id"]] = log
+				eligible.append(receiver)
+
+		def record_results(outcomes):
+			for outcome in outcomes:
+				log = logs[outcome["user_id"]]
+				log.status = outcome["status"]
+				frappe.db.set_value(LOG_DOCTYPE, log.name, {
+					"status": outcome["status"], "dingtalk_status": outcome["status"],
+					"reason": outcome["reason"], "dingtalk_error": outcome["reason"],
+				})
+
+		if eligible:
+			kwargs = {"receivers": eligible, "on_result": record_results}
+			if delivery_channel == "DingTalk Group":
+				kwargs["summary_receivers"] = summary_receivers
+			send_private_chat_notification(doc, rule, **kwargs)
+		# Return a failed recipient when any batch failed; successful targets retain their own logs.
+		return next((log for log in logs.values() if log.status == "Failed"), next(iter(logs.values()), log))
 	except Exception:
 		traceback = frappe.get_traceback()
-		create_log(
-			doc,
-			rule,
-			status="Failed",
-			reason=traceback,
-			notification_channel="DingTalk Private Chat",
-			dingtalk_status="Failed",
-			dingtalk_error=traceback,
+		for pending in logs.values():
+			if pending.status == "Queued":
+				frappe.db.set_value(LOG_DOCTYPE, pending.name, {
+					"status": "Failed", "dingtalk_status": "Failed", "reason": traceback, "dingtalk_error": traceback,
+				})
+		log = create_log(
+			doc, rule, status="Failed", reason=traceback, notification_channel=delivery_channel,
+			dingtalk_status="Failed", dingtalk_error=traceback, dingtalk_user_id=target_id,
+			dingtalk_config=rule.get("dingtalk_config"), retry_of=retry_of,
 		)
 		frappe.log_error(title=f"DingTalk private chat notification failed: {rule.name}", message=traceback)
-		return None
+		return log
+
+
+def already_sent_dingtalk(doc, rule, user_id, delivery_channel="DingTalk Private Chat"):
+	filters = {
+		"rule": rule.name, "reference_doctype": doc.doctype, "reference_name": doc.name,
+		"notification_channel": delivery_channel, "dingtalk_user_id": user_id,
+		"dingtalk_config": rule.dingtalk_config, "status": ["in", ["Queued", "Sent"]],
+	}
+	if rule.get("trigger_type") == "Date Condition":
+		filters["notification_period"] = rule.get("_notification_period")
+	if frappe.db.exists(LOG_DOCTYPE, filters):
+		return True
+	if delivery_channel == "DingTalk Group":
+		return False
+	# Older successful DingTalk logs represented the whole recipient set.
+	legacy_filters = {
+		**filters, "dingtalk_user_id": ["is", "not set"], "dingtalk_config": ["is", "not set"],
+		"status": "Sent", "notification_channel": ["in", ["DingTalk Private Chat", "DingTalk DING"]],
+	}
+	return bool(frappe.db.exists(LOG_DOCTYPE, legacy_filters))
 
 
 def get_notification_channel(rule):
@@ -305,7 +318,7 @@ def get_notification_channel(rule):
 
 
 def channel_uses_email(channel):
-	return channel in ("Email", "Email + DingTalk Private Chat", "Email + DingTalk DING")
+	return channel in ("Email", "Email + DingTalk Private Chat", "Email + DingTalk DING", "Email + DingTalk Group")
 
 
 def channel_uses_desk(channel):
@@ -316,6 +329,8 @@ def channel_uses_desk(channel):
 		"Desk + DingTalk Private Chat",
 		"Email + DingTalk DING",
 		"Desk + DingTalk DING",
+		"Email + DingTalk Group",
+		"Desk + DingTalk Group",
 	)
 
 
@@ -328,6 +343,14 @@ def channel_uses_dingtalk_private_chat(channel):
 		"Email + DingTalk DING",
 		"Desk + DingTalk DING",
 	)
+
+
+def channel_uses_group(channel):
+	return channel in ("DingTalk Group", "Email + DingTalk Group", "Desk + DingTalk Group")
+
+
+def channel_uses_dingtalk(channel):
+	return channel_uses_dingtalk_private_chat(channel) or channel_uses_group(channel)
 
 
 def channel_uses_frappe_users(channel):
@@ -486,6 +509,16 @@ def get_user_language(user):
 	return frappe.db.get_value("User", user, "language") or frappe.local.lang or "en"
 
 
+def get_recipient_skip_reason(doc, rule, user, user_data, send_email=False):
+	if not user_data:
+		return _("User is disabled or missing")
+	if send_email and not user_data.email:
+		return _("User has no email")
+	if rule.respect_permissions and not can_read_doc(doc, user):
+		return _("No read permission")
+	return None
+
+
 def can_read_doc(doc, user):
 	return frappe.has_permission(
 		doc.doctype,
@@ -495,20 +528,25 @@ def can_read_doc(doc, user):
 	)
 
 
-def already_sent(doc, rule, user):
+def already_sent(doc, rule, user, notification_channel=None):
 	if not frappe.db.exists("DocType", LOG_DOCTYPE):
 		return False
-
+	channel = notification_channel or get_notification_channel(rule)
 	filters = {
-		"rule": rule.name,
-		"reference_doctype": doc.doctype,
-		"reference_name": doc.name,
-		"user": user,
-		"status": ["in", ["Queued", "Sent"]],
+		"rule": rule.name, "reference_doctype": doc.doctype, "reference_name": doc.name,
+		"user": user, "status": ["in", ["Queued", "Sent"]],
 	}
 	if rule.get("trigger_type") == "Date Condition" and frappe.db.has_column(LOG_DOCTYPE, "notification_period"):
 		filters["notification_period"] = rule.get("_notification_period")
-	return bool(frappe.db.exists(LOG_DOCTYPE, filters))
+	if frappe.db.exists(LOG_DOCTYPE, {**filters, "delivery_channel": channel}):
+		return True
+	legacy_channels = [name for name in (
+		"Email", "Desk", "Email + DingTalk Private Chat", "Desk + DingTalk Private Chat",
+		"Email + DingTalk DING", "Desk + DingTalk DING",
+	) if (channel_uses_email(name) if channel == "Email" else channel_uses_desk(name))]
+	return bool(frappe.db.exists(LOG_DOCTYPE, {
+		**filters, "delivery_channel": ["is", "not set"], "notification_channel": ["in", legacy_channels],
+	}))
 
 
 def create_desk_notification(doc, rule, user, user_email, subject, message):
@@ -536,6 +574,7 @@ def create_desk_notification(doc, rule, user, user_email, subject, message):
 			title=f"Draft notification desk alert failed for user {user_email}",
 			message=frappe.get_traceback(),
 		)
+		raise
 
 
 def already_notified(doc, rule, user, subject):
@@ -609,6 +648,10 @@ def create_log(
 	dingtalk_open_ding_id=None,
 	dingtalk_error=None,
 	notification_period=None,
+	dingtalk_user_id=None,
+	dingtalk_config=None,
+	retry_of=None,
+	delivery_channel=None,
 ):
 	if not frappe.db.exists("DocType", LOG_DOCTYPE):
 		return
@@ -629,6 +672,14 @@ def create_log(
 			"dingtalk_error": dingtalk_error,
 			"reason": reason,
 		}
+		if not delivery_channel and notification_channel in ("DingTalk Private Chat", "DingTalk DING", "DingTalk Group"):
+			delivery_channel = "DingTalk Group" if notification_channel == "DingTalk Group" else "DingTalk Private Chat"
+		for field, value in (
+			("dingtalk_user_id", dingtalk_user_id), ("dingtalk_config", dingtalk_config),
+			("retry_of", retry_of), ("delivery_channel", delivery_channel),
+		):
+			if value is not None and frappe.db.has_column(LOG_DOCTYPE, field):
+				log_data[field] = value
 		if frappe.db.has_column(LOG_DOCTYPE, "notification_period"):
 			log_data["notification_period"] = notification_period or rule.get("_notification_period")
 		return frappe.get_doc(
@@ -731,12 +782,63 @@ def should_skip_date_condition(doc, rule):
 	)
 
 
+def get_retry_root(log):
+	"""Resolve old multi-level chains; all new attempts point directly to their root."""
+	seen = set()
+	while True:
+		if log.name in seen:
+			frappe.throw(_("Notification retry chain is invalid."))
+		seen.add(log.name)
+		if not log.get("retry_of"):
+			return log.name
+		log = frappe.get_doc(LOG_DOCTYPE, log.retry_of)
+		log.check_permission("write")
+
+
+def get_retry_attempt(root, channel, user=None, user_id=None, config=None):
+	"""Find queued/successful attempts anywhere in a historical retry tree."""
+	frontier = [root]
+	seen = {root}
+	while frontier:
+		# Locking reads see committed attempts after waiting for the root lock,
+		# including on databases configured with repeatable-read isolation.
+		rows = frappe.db.get_values(
+			LOG_DOCTYPE, filters={"retry_of": ["in", frontier]},
+			fieldname=["name", "status", "notification_channel", "delivery_channel", "user", "dingtalk_user_id", "dingtalk_config"],
+			as_dict=True, for_update=True,
+		)
+		frontier = []
+		for row in rows:
+			if row.name in seen:
+				continue
+			seen.add(row.name)
+			frontier.append(row.name)
+			if row.status not in ("Queued", "Sent"):
+				continue
+			actual = row.get("delivery_channel")
+			if actual:
+				matches = actual == channel
+			elif channel == "Email":
+				matches = channel_uses_email(row.notification_channel)
+			elif channel == "Desk":
+				matches = channel_uses_desk(row.notification_channel)
+			else:
+				matches = row.notification_channel in ("DingTalk Private Chat", "DingTalk DING")
+			if not matches or (user and row.user != user):
+				continue
+			if user_id and (row.dingtalk_user_id != user_id or (config and row.dingtalk_config != config)):
+				continue
+			return row
+	return None
+
+
 @frappe.whitelist()
 def retry_failed_log(log_name):
 	if not frappe.has_permission(LOG_DOCTYPE, "write"):
 		frappe.throw(_("Not permitted"), frappe.PermissionError)
 
 	log = frappe.get_doc(LOG_DOCTYPE, log_name)
+	log.check_permission("write")
 	if log.status != "Failed":
 		frappe.throw(_("Only failed draft notification logs can be retried."))
 
@@ -752,10 +854,35 @@ def retry_failed_log(log_name):
 	doc = frappe.get_doc(log.reference_doctype, log.reference_name)
 	rule = frappe.get_doc(RULE_DOCTYPE, log.rule)
 
-	if log.notification_channel in ("DingTalk Private Chat", "DingTalk DING") or (not log.user and channel_uses_dingtalk_private_chat(get_notification_channel(rule))):
-		retry_log = send_dingtalk_private_chat_for_rule(doc, rule)
+	if not rule.enabled:
+		frappe.throw(_("Disabled notification rules cannot be retried."))
+	if not all(frappe.db.has_column(LOG_DOCTYPE, field) for field in ("retry_of", "delivery_channel")):
+		frappe.throw(_("Notification log schema is outdated. Please migrate the site before retrying."))
+	root = get_retry_root(log)
+	frappe.db.get_value(LOG_DOCTYPE, root, "name", for_update=True)
+	channel = log.get("delivery_channel") or log.notification_channel or get_notification_channel(rule)
+	# Legacy aggregate DingTalk logs can have both successful and failed retry children.
+	if channel in ("DingTalk Private Chat", "DingTalk DING", "DingTalk Group") and log.get("dingtalk_user_id"):
+		previous_retry = get_retry_attempt(root, "DingTalk Group" if channel == "DingTalk Group" else "DingTalk Private Chat", user_id=log.dingtalk_user_id,
+			config=log.get("dingtalk_config"))
+		if previous_retry:
+			return {"status": previous_retry.status, "log": previous_retry.name}
+	# Preserve the source period rather than interpreting a retry as today's reminder.
+	rule._notification_period = log.get("notification_period")
+	if channel in ("DingTalk Private Chat", "DingTalk DING", "DingTalk Group"):
+		rule.notification_channel = channel
+		if log.get("dingtalk_config"):
+			rule.dingtalk_config = log.dingtalk_config
+		retry_log = send_dingtalk_private_chat_for_rule(
+			doc, rule, target_id=log.get("dingtalk_user_id"), retry_of=root,
+		)
 	else:
-		retry_log = send_to_user(doc, rule, log.user, ignore_deduplicate=True, notification_channel=log.notification_channel)
+		retry_log = send_to_user(
+			doc, rule, log.user, ignore_deduplicate=True,
+			send_email=channel_uses_email(channel),
+			send_desk=(channel == "Desk" if log.get("delivery_channel") else channel_uses_desk(channel)),
+			notification_channel=log.notification_channel or channel, retry_of=root,
+		)
 
 	return {"status": retry_log.status if retry_log else None, "log": retry_log.name if retry_log else None}
 

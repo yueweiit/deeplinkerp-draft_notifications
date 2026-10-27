@@ -9,10 +9,15 @@
  "field_order": [
   "config_name",
   "enabled",
+  "robot_type",
   "credentials_section",
   "app_key",
   "app_secret",
   "robot_code",
+  "group_section",
+  "group_webhook",
+  "group_secret",
+  "group_keyword",
   "recipients_section",
   "recipients"
  ],
@@ -35,37 +40,73 @@
   {
    "fieldname": "credentials_section",
    "fieldtype": "Section Break",
-   "label": "DingTalk Credentials"
+   "label": "DingTalk Credentials",
+   "depends_on": "eval:!doc.robot_type || doc.robot_type == 'Private Chat'"
   },
   {
    "fieldname": "app_key",
    "fieldtype": "Data",
    "label": "AppKey",
-   "reqd": 1
+   "mandatory_depends_on": "eval:!doc.robot_type || doc.robot_type == 'Private Chat'"
   },
   {
    "fieldname": "app_secret",
    "fieldtype": "Password",
    "label": "AppSecret",
-   "reqd": 1
+   "mandatory_depends_on": "eval:!doc.robot_type || doc.robot_type == 'Private Chat'"
   },
   {
    "description": "RobotCode of the DingTalk internal app robot.",
    "fieldname": "robot_code",
    "fieldtype": "Data",
    "label": "RobotCode",
-   "reqd": 1
+   "mandatory_depends_on": "eval:!doc.robot_type || doc.robot_type == 'Private Chat'"
   },
   {
    "fieldname": "recipients_section",
    "fieldtype": "Section Break",
-   "label": "Default Recipients"
+   "label": "Default Recipients",
+   "depends_on": "eval:!doc.robot_type || doc.robot_type == 'Private Chat'"
   },
   {
    "fieldname": "recipients",
    "fieldtype": "Table",
    "label": "Default Recipients",
    "options": "DingTalk Robot Recipient"
+  },
+  {
+   "fieldname": "robot_type",
+   "fieldtype": "Select",
+   "label": "Robot Type",
+   "options": "Private Chat\nGroup Webhook",
+   "default": "Private Chat",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "group_section",
+   "fieldtype": "Section Break",
+   "label": "Group Webhook",
+   "depends_on": "eval:doc.robot_type == 'Group Webhook'",
+   "description": "Group messages are visible to all group members. Mentions only notify the selected ERP users."
+  },
+  {
+   "fieldname": "group_webhook",
+   "fieldtype": "Password",
+   "label": "Group Webhook URL",
+   "mandatory_depends_on": "eval:doc.robot_type == 'Group Webhook'"
+  },
+  {
+   "fieldname": "group_secret",
+   "fieldtype": "Password",
+   "label": "Group Signing Secret",
+   "description": "Fill this only when signing is enabled on the group robot."
+  },
+  {
+   "fieldname": "group_keyword",
+   "fieldtype": "Data",
+   "label": "Group Security Keyword",
+   "description": "If keyword security is enabled, this value is added to the message body."
   }
  ],
  "links": [],

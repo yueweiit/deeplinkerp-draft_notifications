@@ -4,12 +4,14 @@ frappe.ui.form.on("DingTalk Robot Config", {
 			return;
 		}
 
-		frm.add_custom_button(__("Test Connection"), () => {
+		const is_group = frm.doc.robot_type === "Group Webhook";
+		frm.add_custom_button(__(is_group ? "Validate Webhook" : "Test Connection"), () => {
+			if (!ensure_saved_robot_config(frm)) return;
 			frappe.call({
 				method: "draft_notifications.dingtalk_robot.test_dingtalk_config",
 				args: { config_name: frm.doc.name },
 				freeze: true,
-				freeze_message: __("Testing connection..."),
+				freeze_message: __(is_group ? "Validating Webhook..." : "Testing connection..."),
 				callback(response) {
 					const result = response.message || {};
 					frappe.show_alert({
@@ -20,7 +22,26 @@ frappe.ui.form.on("DingTalk Robot Config", {
 			});
 		});
 
+		if (is_group) {
+			frm.add_custom_button(__("Send Test Group Message"), () => {
+				if (!ensure_saved_robot_config(frm)) return;
+				frappe.prompt([
+					{ fieldname: "user", fieldtype: "Link", options: "User", label: __("ERP User"), reqd: 1 },
+					{ fieldname: "message", fieldtype: "Small Text", label: __("Message") },
+				], (values) => {
+					frappe.call({
+						method: "draft_notifications.dingtalk_group.send_test_group",
+						args: { config_name: frm.doc.name, ...values },
+						freeze: true,
+						callback() { frappe.show_alert({ message: __("Sent."), indicator: "green" }); },
+					});
+				}, __("Send Test Group Message"), __("Send"));
+			});
+			return;
+		}
+
 		frm.add_custom_button(__("Send Test Private Chat"), () => {
+			if (!ensure_saved_robot_config(frm)) return;
 			frappe.prompt(
 				[
 					{
@@ -60,3 +81,11 @@ frappe.ui.form.on("DingTalk Robot Config", {
 		});
 	},
 });
+
+function ensure_saved_robot_config(frm) {
+	if (frm.is_dirty()) {
+		frappe.msgprint(__("Save the robot configuration before testing."));
+		return false;
+	}
+	return true;
+}

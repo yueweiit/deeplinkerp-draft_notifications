@@ -156,3 +156,54 @@ Jinja template. Use {{ doc.fieldname }} to read fields from the current document
 Pending,待处理
 Spanish DingTalk private chat template. Used when recipient language starts with es. Use {{ doc.fieldname }} to read document fields and {{ doc_url }} for the document link.,西班牙语钉钉私聊模板。当收件人语言以 es 开头时使用。使用 {{ doc.fieldname }} 读取单据字段，使用 {{ doc_url }} 获取单据链接。
 "Spanish Jinja template. Used when recipient language starts with es. Use {{ doc.fieldname }} to read document fields, {{ doc.name }} for the document number, and {{ doc_url }} for the document link.",西班牙语 Jinja 模板。当收件人语言以 es 开头时使用。使用 {{ doc.fieldname }} 读取单据字段，使用 {{ doc.name }} 获取单据编号，使用 {{ doc_url }} 获取单据链接。
+Retry Of,重试来源
+DingTalk rejected or throttled this recipient.,钉钉拒绝、限流或过滤了此接收人。
+DingTalk UserId is linked to multiple ERP users.,此钉钉 UserId 关联了多个 ERP 用户。
+Notification log schema is outdated. Please migrate the site before sending DingTalk notifications.,通知日志结构未更新，请迁移站点后再发送钉钉通知。
+Notification log schema is outdated. Please migrate the site before retrying.,通知日志结构未更新，请迁移站点后再重试。
+No eligible DingTalk recipients found.,未找到符合条件的钉钉接收人。
+Disabled notification rules cannot be retried.,已停用的通知规则不能重试。
+User is disabled or missing,用户已停用或不存在
+User has no email,用户未设置邮箱
+No read permission,无单据读取权限
+Already sent,已发送
+DingTalk returned an empty or invalid send response.,钉钉返回了空的或无效的发送响应。
+Delivery Channel,投递渠道
+Notification retry chain is invalid.,通知重试链无效。
+Notification log schema is outdated. Please migrate the site before sending notifications.,通知日志结构未更新，请迁移站点后再发送通知。
+Robot Type,机器人类型
+Private Chat,企业应用私聊
+Group Webhook,群 Webhook
+Group Webhook URL,群 Webhook 地址
+Group Signing Secret,群机器人加签密钥
+Group Security Keyword,群机器人安全关键词
+Group messages are visible to all group members. Mentions only notify the selected ERP users.,群内所有成员均可看到消息，@ 仅提醒通知规则选中的 ERP 用户。
+Fill this only when signing is enabled on the group robot.,仅当群机器人开启加签时填写。
+"If keyword security is enabled, this value is added to the message body.",如开启关键词安全校验，此值将加入消息正文。
+DingTalk Group,钉钉群消息
+Email + DingTalk Group,邮件 + 钉钉群消息
+Desk + DingTalk Group,站内通知 + 钉钉群消息
+Enter a valid DingTalk group Webhook URL without signing parameters.,请输入有效的钉钉群 Webhook 地址，不要附带加签参数。
+Select a group Webhook robot configuration for this channel.,请为此渠道选择群 Webhook 机器人配置。
+Group mentions require a DingTalk UserId or mobile number.,群消息 @ 需要用户的钉钉 UserId 或手机号。
+Check the group Webhook URL and signing secret configuration.,请检查群 Webhook 地址及加签密钥配置。
+DingTalk group request failed; check connectivity and retry status.,钉钉群消息请求失败，请检查网络并核对重试状态。
+DingTalk group request failed with HTTP {0}.,钉钉群消息请求失败，HTTP 状态码为 {0}。
+DingTalk returned an invalid group response.,钉钉返回了无效的群消息响应。
+DingTalk group rejected the message (code {0}); check robot security settings.,钉钉群机器人拒绝了消息（错误码 {0}），请检查机器人安全设置。
+Select an enabled ERP user with a unique DingTalk UserId or mobile number.,请选择已启用且绑定唯一钉钉 UserId 或手机号的 ERP 用户。
+"Private chat robots require AppKey, AppSecret and RobotCode.",企业应用私聊机器人需要填写 AppKey、AppSecret 和 RobotCode。
+The DingTalk channel and robot type must match.,钉钉通知渠道必须与机器人类型一致。
+Webhook format is valid. No group message was sent.,Webhook 地址格式有效，尚未发送群消息。
+Validate Webhook,校验 Webhook
+Send Test Group Message,发送测试群消息
+ERP User,ERP 用户
+No enabled DingTalk Robot Config found: {0}.,未找到启用的钉钉机器人配置：{0}。
+Save the robot configuration before testing.,请保存机器人配置后再测试。
+Validating Webhook...,正在校验 Webhook……
+DingTalk group request failed ({0}); check connectivity and retry status.,钉钉群消息请求失败（异常类型：{0}），请检查网络并核对重试状态。
+New sales order,新增销售订单
+Historical pending orders could not be loaded; check the sales order list.,历史待审核订单加载失败，请查看销售订单列表。
+Historical orders pending financial review ({0}),历史待财务审核订单（{0} 单）
+{0} more pending orders.,另有 {0} 单待审核。
+View all historical pending orders,查看全部历史待审核订单

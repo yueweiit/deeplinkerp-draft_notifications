@@ -238,11 +238,11 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Notification Channel",
-   "options": "Email\nDesk\nDingTalk Private Chat\nEmail + DingTalk Private Chat\nDesk + DingTalk Private Chat",
+   "options": "Email\nDesk\nDingTalk Private Chat\nEmail + DingTalk Private Chat\nDesk + DingTalk Private Chat\nDingTalk Group\nEmail + DingTalk Group\nDesk + DingTalk Group",
    "reqd": 1
   },
   {
-   "depends_on": "eval:['DingTalk Private Chat','Email + DingTalk Private Chat','Desk + DingTalk Private Chat','DingTalk DING','Email + DingTalk DING','Desk + DingTalk DING'].includes(doc.notification_channel)",
+   "depends_on": "eval:(doc.notification_channel || '').includes('DingTalk')",
    "fieldname": "dingtalk_config",
    "fieldtype": "Link",
    "label": "DingTalk Robot Config",
@@ -250,28 +250,28 @@
    "options": "DingTalk Robot Config"
   },
   {
-   "depends_on": "eval:['DingTalk Private Chat','Email + DingTalk Private Chat','Desk + DingTalk Private Chat','DingTalk DING','Email + DingTalk DING','Desk + DingTalk DING'].includes(doc.notification_channel)",
+   "depends_on": "eval:(doc.notification_channel || '').includes('DingTalk')",
    "description": "Jinja template. Available variables: doc, doc_url, doc_type, doc_name. Use {{ doc.fieldname }} to read a field from the current document. Example: {{ doc.name }} - {{ doc.supplier }}.",
    "fieldname": "dingtalk_message_template",
    "fieldtype": "Text Editor",
    "label": "DingTalk Message Template"
   },
   {
-   "depends_on": "eval:['DingTalk Private Chat','Email + DingTalk Private Chat','Desk + DingTalk Private Chat','DingTalk DING','Email + DingTalk DING','Desk + DingTalk DING'].includes(doc.notification_channel)",
+   "depends_on": "eval:(doc.notification_channel || '').includes('DingTalk')",
    "description": "Chinese DingTalk private chat template. Used when recipient language starts with zh. Use {{ doc.fieldname }} to read document fields and {{ doc_url }} for the document link.",
    "fieldname": "dingtalk_message_zh",
    "fieldtype": "Text Editor",
    "label": "Chinese DingTalk Message"
   },
   {
-   "depends_on": "eval:['DingTalk Private Chat','Email + DingTalk Private Chat','Desk + DingTalk Private Chat','DingTalk DING','Email + DingTalk DING','Desk + DingTalk DING'].includes(doc.notification_channel)",
+   "depends_on": "eval:(doc.notification_channel || '').includes('DingTalk')",
    "description": "English DingTalk private chat template. Used when recipient language starts with en. Use {{ doc.fieldname }} to read document fields and {{ doc_url }} for the document link.",
    "fieldname": "dingtalk_message_en",
    "fieldtype": "Text Editor",
    "label": "English DingTalk Message"
   },
   {
-   "depends_on": "eval:['DingTalk Private Chat','Email + DingTalk Private Chat','Desk + DingTalk Private Chat','DingTalk DING','Email + DingTalk DING','Desk + DingTalk DING'].includes(doc.notification_channel)",
+   "depends_on": "eval:(doc.notification_channel || '').includes('DingTalk')",
    "description": "Spanish DingTalk private chat template. Used when recipient language starts with es. Use {{ doc.fieldname }} to read document fields and {{ doc_url }} for the document link.",
    "fieldname": "dingtalk_message_es",
    "fieldtype": "Text Editor",

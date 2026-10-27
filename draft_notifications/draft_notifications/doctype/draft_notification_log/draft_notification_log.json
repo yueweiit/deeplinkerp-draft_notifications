@@ -8,6 +8,7 @@
  "field_order": [
   "rule",
   "notification_channel",
+  "delivery_channel",
   "status",
   "user",
   "email",
@@ -19,7 +20,10 @@
   "dingtalk_status",
   "dingtalk_open_ding_id",
   "dingtalk_error",
-  "reason"
+  "reason",
+  "dingtalk_user_id",
+  "dingtalk_config",
+  "retry_of"
  ],
  "fields": [
   {
@@ -126,6 +130,35 @@
    "fieldtype": "Text",
    "label": "Reason",
    "read_only": 1
+  },
+  {
+   "fieldname": "dingtalk_user_id",
+   "label": "DingTalk UserId",
+   "fieldtype": "Data",
+   "read_only": 1
+  },
+  {
+   "fieldname": "dingtalk_config",
+   "label": "DingTalk Robot Config",
+   "fieldtype": "Link",
+   "read_only": 1,
+   "options": "DingTalk Robot Config"
+  },
+  {
+   "fieldname": "retry_of",
+   "label": "Retry Of",
+   "fieldtype": "Link",
+   "read_only": 1,
+   "options": "Draft Notification Log"
+  },
+  {
+   "fieldname": "delivery_channel",
+   "label": "Delivery Channel",
+   "fieldtype": "Select",
+   "options": "\nEmail\nDesk\nDingTalk Private Chat\nDingTalk Group",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
   }
  ],
  "in_create": 1,
@@ -144,7 +177,8 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
-   "share": 1
+   "share": 1,
+   "write": 1
   }
  ],
  "row_format": "Dynamic",

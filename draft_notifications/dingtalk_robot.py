@@ -159,6 +159,9 @@ def send_private_chat_message(config_name, receiver_user_ids, content, title=Non
 	if not config:
 		raise ValueError(_("No enabled DingTalk Robot Config found: {0}").format(config_name))
 
+	if config.get("robot_type") == "Group Webhook":
+		raise DingTalkAPIError(_("The DingTalk channel and robot type must match."))
+
 	receiver_user_ids = unique([user_id for user_id in receiver_user_ids if user_id])
 	if not receiver_user_ids:
 		raise ValueError(_("DingTalk receiver list cannot be empty."))
@@ -187,7 +190,9 @@ def send_private_chat_message(config_name, receiver_user_ids, content, title=Non
 	if is_dingtalk_error(result):
 		raise_dingtalk_error("private chat message", data=result)
 
-	return result or {"sent": True}
+	if not isinstance(result, dict) or not result:
+		raise DingTalkAPIError(_("DingTalk returned an empty or invalid send response."))
+	return result
 
 
 def build_private_chat_payload(robot_code, receiver_user_ids, content, title=None):
@@ -209,56 +214,94 @@ def send_ding_message(config_name, receiver_user_ids, content, remind_type=None)
 	return send_private_chat_message(config_name, receiver_user_ids, content)
 
 
-def send_private_chat_notification(doc, rule, receiver_users=None, content=None):
+def send_private_chat_notification(
+	doc, rule, receiver_users=None, content=None, receivers=None, on_result=None, summary_receivers=None,
+):
 	config_name = rule.get("dingtalk_config")
 	if not config_name:
 		raise ValueError(_("DingTalk Robot Config is required for rule {0}.").format(rule.name))
 
 	config = get_dingtalk_config(config_name)
 	if not config:
-		raise DingTalkAPIError(_("No enabled DingTalk Robot Config found: {0}").format(config_name))
+		raise DingTalkAPIError(_("No enabled DingTalk Robot Config found: {0}.").format(config_name))
 
-	receivers = get_dingtalk_receivers(config_name, receiver_users=receiver_users, _config=config)
-	if not receivers:
-		frappe.log_error(
-			title=f"DingTalk notification has no receivers: {rule.name}",
-			message=f"{doc.doctype} {doc.name} has no DingTalk receiver user ids.",
-		)
-		return None
+	is_group = config.get("robot_type") == "Group Webhook"
+	if is_group != ("DingTalk Group" in (rule.get("notification_channel") or "")):
+		raise DingTalkAPIError(_("The DingTalk channel and robot type must match."))
+	if receivers is None:
+		if is_group:
+			from draft_notifications.dingtalk_group import get_group_receivers
 
+			receivers = get_group_receivers(config_name, receiver_users=receiver_users)
+		else:
+			receivers = get_dingtalk_receivers(config_name, receiver_users=receiver_users, _config=config)
+	# A group message is visible across languages and mention batches, including retries.
+	if summary_receivers is None:
+		summary_receivers = receivers
 	results = []
 	for language_key, receiver_ids in group_receivers_by_language(receivers).items():
-		results.append(
-			send_private_chat_message(
-				config_name=config_name,
-				receiver_user_ids=receiver_ids,
-				content=content or render_dingtalk_message(doc, rule, language_key),
-				title=f"{doc.doctype} {doc.name}",
-				_config=config,
-			)
-		)
+		for offset in range(0, len(receiver_ids), 20):
+			batch = receiver_ids[offset:offset + 20]
+			try:
+				message = content or render_dingtalk_message(doc, rule, language_key)
+				if is_group:
+					from draft_notifications.dingtalk_group import send_group_message
+					from draft_notifications.pending_sales_orders import compose_group_message
 
+					message = compose_group_message(doc, rule, message, language_key, summary_receivers)
+					response = send_group_message(config, batch, message, f"{doc.doctype} {doc.name}")
+				else:
+					response = send_private_chat_message(
+						config_name=config_name, receiver_user_ids=batch, content=message,
+						title=f"{doc.doctype} {doc.name}", _config=config,
+					)
+				failed = set(response.get("invalidStaffIdList") or []) | set(response.get("flowControlledStaffIdList") or []) | set(response.get("filteredStaffIdList") or [])
+				# Retain compatibility with older adapters returning failed_list.
+				if response.get("failed_list"):
+					failed.update(batch)
+				outcomes = [
+					{"user_id": user_id, "status": "Failed" if user_id in failed else "Sent",
+					 "reason": _("DingTalk rejected or throttled this recipient.") if user_id in failed else None}
+					for user_id in batch
+				]
+			except Exception as exc:
+				outcomes = [{"user_id": user_id, "status": "Failed", "reason": str(exc)} for user_id in batch]
+			# Persist this batch before attempting the next, including partial successes.
+			if on_result:
+				on_result(outcomes)
+			results.extend(outcomes)
 	return results
 
 
 def get_dingtalk_receivers(config_name, receiver_users=None, _config=None):
 	receivers = []
 	config = _config or get_dingtalk_config(config_name)
-
 	if config:
 		for row in config.recipients or []:
 			if row.user_id:
 				receivers.append({"user_id": row.user_id, "language": None})
 
-	if receiver_users and user_has_dingtalk_user_id_field():
-		users_data = frappe.get_all(
-			"User",
-			filters={"name": ["in", list(receiver_users)], "dingtalk_user_id": ["is", "set"]},
-			fields=["dingtalk_user_id", "language"],
-		)
-		for user_data in users_data:
-			receivers.append({"user_id": user_data.dingtalk_user_id, "language": get_language_key(user_data.language)})
-
+	if user_has_dingtalk_user_id_field():
+		if receiver_users:
+			for user in frappe.get_all(
+				"User", filters={"name": ["in", list(receiver_users)], "dingtalk_user_id": ["is", "set"]},
+				fields=["dingtalk_user_id"],
+			):
+				receivers.append({"user_id": user.dingtalk_user_id, "language": None})
+		ids = [receiver["user_id"] for receiver in receivers]
+		users = frappe.get_all(
+			"User", filters={"dingtalk_user_id": ["in", ids]},
+			fields=["name", "enabled", "dingtalk_user_id", "language"],
+		) if ids else []
+		by_id = {}
+		for user in users:
+			by_id.setdefault(user.dingtalk_user_id, []).append(user)
+		for receiver in receivers:
+			linked = by_id.get(receiver["user_id"], [])
+			receiver["ambiguous"] = len(linked) > 1
+			if len(linked) == 1:
+				user = linked[0]
+				receiver.update(user=user.name, enabled=user.enabled, language=get_language_key(user.language))
 	return unique_receivers(receivers)
 
 
@@ -350,6 +393,12 @@ def unique_receivers(receivers):
 
 def validate_dingtalk_config(config_name):
 	try:
+		config = get_dingtalk_config(config_name)
+		if config and config.get("robot_type") == "Group Webhook":
+			from draft_notifications.dingtalk_group import validate_webhook_url
+
+			validate_webhook_url(config.get_password("group_webhook"))
+			return {"success": True, "message": _("Webhook format is valid. No group message was sent.")}
 		get_dingtalk_access_token(config_name)
 		return {"success": True, "message": _("Connection succeeded.")}
 	except Exception as exc:

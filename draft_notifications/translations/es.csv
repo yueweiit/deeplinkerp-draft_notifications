@@ -157,3 +157,54 @@ Jinja template. Use {{ doc.fieldname }} to read fields from the current document
 Document,Documento
 Pending,Pendiente
 Sent,Enviado
+Retry Of,Reintento de
+DingTalk rejected or throttled this recipient.,"DingTalk rechazó, limitó o filtró a este destinatario."
+DingTalk UserId is linked to multiple ERP users.,Este UserId de DingTalk está vinculado a varios usuarios del ERP.
+Notification log schema is outdated. Please migrate the site before sending DingTalk notifications.,El esquema del registro de notificaciones está desactualizado. Migre el sitio antes de enviar notificaciones de DingTalk.
+Notification log schema is outdated. Please migrate the site before retrying.,El esquema del registro de notificaciones está desactualizado. Migre el sitio antes de reintentar.
+No eligible DingTalk recipients found.,No se encontraron destinatarios aptos de DingTalk.
+Disabled notification rules cannot be retried.,No se pueden reintentar reglas de notificación deshabilitadas.
+User is disabled or missing,El usuario está deshabilitado o no existe
+User has no email,El usuario no tiene correo electrónico
+No read permission,Sin permiso de lectura del documento
+Already sent,Ya enviado
+DingTalk returned an empty or invalid send response.,DingTalk devolvió una respuesta de envío vacía o no válida.
+Delivery Channel,Canal de entrega
+Notification retry chain is invalid.,La cadena de reintentos de notificación no es válida.
+Notification log schema is outdated. Please migrate the site before sending notifications.,El esquema del registro de notificaciones está desactualizado. Migre el sitio antes de enviar notificaciones.
+Robot Type,Tipo de robot
+Private Chat,Chat privado
+Group Webhook,Webhook de grupo
+Group Webhook URL,URL del Webhook de grupo
+Group Signing Secret,Secreto de firma del robot de grupo
+Group Security Keyword,Palabra clave de seguridad del grupo
+Group messages are visible to all group members. Mentions only notify the selected ERP users.,Los mensajes son visibles para todos los miembros del grupo. Las menciones solo notifican a los usuarios del ERP seleccionados.
+Fill this only when signing is enabled on the group robot.,Complete este campo solo si la firma está habilitada en el robot del grupo.
+"If keyword security is enabled, this value is added to the message body.","Si la seguridad por palabra clave está habilitada, este valor se añade al cuerpo del mensaje."
+DingTalk Group,Grupo de DingTalk
+Email + DingTalk Group,Correo + grupo de DingTalk
+Desk + DingTalk Group,Notificación interna + grupo de DingTalk
+Enter a valid DingTalk group Webhook URL without signing parameters.,Introduzca una URL válida de Webhook de grupo de DingTalk sin parámetros de firma.
+Select a group Webhook robot configuration for this channel.,Seleccione una configuración de robot Webhook de grupo para este canal.
+Group mentions require a DingTalk UserId or mobile number.,Las menciones en el grupo requieren un UserId de DingTalk o un número de móvil.
+Check the group Webhook URL and signing secret configuration.,Revise la URL del Webhook del grupo y la configuración del secreto de firma.
+DingTalk group request failed; check connectivity and retry status.,Falló la solicitud al grupo de DingTalk; revise la conexión y el estado del reintento.
+DingTalk group request failed with HTTP {0}.,La solicitud al grupo de DingTalk falló con HTTP {0}.
+DingTalk returned an invalid group response.,DingTalk devolvió una respuesta de grupo no válida.
+DingTalk group rejected the message (code {0}); check robot security settings.,El robot del grupo de DingTalk rechazó el mensaje (código {0}); revise su configuración de seguridad.
+Select an enabled ERP user with a unique DingTalk UserId or mobile number.,Seleccione un usuario habilitado del ERP con un UserId de DingTalk o un móvil único.
+"Private chat robots require AppKey, AppSecret and RobotCode.","Los robots de chat privado requieren AppKey, AppSecret y RobotCode."
+The DingTalk channel and robot type must match.,El canal de DingTalk debe coincidir con el tipo de robot.
+Webhook format is valid. No group message was sent.,El formato del Webhook es válido. No se ha enviado ningún mensaje al grupo.
+Validate Webhook,Validar Webhook
+Send Test Group Message,Enviar mensaje de prueba al grupo
+ERP User,Usuario del ERP
+No enabled DingTalk Robot Config found: {0}.,No se encontró una configuración habilitada del robot de DingTalk: {0}.
+Save the robot configuration before testing.,Guarde la configuración del robot antes de realizar la prueba.
+Validating Webhook...,Validando Webhook...
+DingTalk group request failed ({0}); check connectivity and retry status.,Falló la solicitud al grupo de DingTalk (tipo de excepción: {0}); revise la conexión y el estado del reintento.
+New sales order,Nuevo pedido de venta
+Historical pending orders could not be loaded; check the sales order list.,No se pudieron cargar los pedidos anteriores pendientes; consulte la lista de pedidos de venta.
+Historical orders pending financial review ({0}),Pedidos anteriores pendientes de revisión financiera ({0})
+{0} more pending orders.,Hay {0} pedidos pendientes más.
+View all historical pending orders,Ver todos los pedidos anteriores pendientes

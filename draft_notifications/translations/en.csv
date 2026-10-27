@@ -1,2 +1,59 @@
 Failed,Failed
 "Jinja template. The current document is available as doc. Use {{ doc.fieldname }} to read document fields, {{ doc.name }} for the document number, {{ doc_url }} for the document link, and {{ doc_type }} / {{ doc_name }} for document information. Example: 采购订单 {{ doc.name }} 的供应商为 {{ doc.supplier }}。","Jinja template. The current document is available as doc. Use {{ doc.fieldname }} to read document fields, {{ doc.name }} for the document number, {{ doc_url }} for the document link, and {{ doc_type }} / {{ doc_name }} for document information. Example: The supplier of purchase order {{ doc.name }} is {{ doc.supplier }}."
+Retry Of,Retry Of
+DingTalk Robot Config,DingTalk Robot Config
+DingTalk UserId,DingTalk UserId
+DingTalk rejected or throttled this recipient.,DingTalk rejected or throttled this recipient.
+DingTalk UserId is linked to multiple ERP users.,DingTalk UserId is linked to multiple ERP users.
+Notification log schema is outdated. Please migrate the site before sending DingTalk notifications.,Notification log schema is outdated. Please migrate the site before sending DingTalk notifications.
+Notification log schema is outdated. Please migrate the site before retrying.,Notification log schema is outdated. Please migrate the site before retrying.
+No eligible DingTalk recipients found.,No eligible DingTalk recipients found.
+Disabled notification rules cannot be retried.,Disabled notification rules cannot be retried.
+User is disabled or missing,User is disabled or missing
+User has no email,User has no email
+No read permission,No read permission
+Already sent,Already sent
+DingTalk returned an empty or invalid send response.,DingTalk returned an empty or invalid send response.
+Delivery Channel,Delivery Channel
+Notification retry chain is invalid.,Notification retry chain is invalid.
+Notification log schema is outdated. Please migrate the site before sending notifications.,Notification log schema is outdated. Please migrate the site before sending notifications.
+Robot Type,Robot Type
+Private Chat,Private Chat
+Group Webhook,Group Webhook
+Group Webhook URL,Group Webhook URL
+Group Signing Secret,Group Signing Secret
+Group Security Keyword,Group Security Keyword
+Group messages are visible to all group members. Mentions only notify the selected ERP users.,Group messages are visible to all group members. Mentions only notify the selected ERP users.
+Fill this only when signing is enabled on the group robot.,Fill this only when signing is enabled on the group robot.
+"If keyword security is enabled, this value is added to the message body.","If keyword security is enabled, this value is added to the message body."
+DingTalk Group,DingTalk Group
+Email + DingTalk Group,Email + DingTalk Group
+Desk + DingTalk Group,Desk + DingTalk Group
+Enter a valid DingTalk group Webhook URL without signing parameters.,Enter a valid DingTalk group Webhook URL without signing parameters.
+Select a group Webhook robot configuration for this channel.,Select a group Webhook robot configuration for this channel.
+Group mentions require a DingTalk UserId or mobile number.,Group mentions require a DingTalk UserId or mobile number.
+Check the group Webhook URL and signing secret configuration.,Check the group Webhook URL and signing secret configuration.
+DingTalk group request failed; check connectivity and retry status.,DingTalk group request failed; check connectivity and retry status.
+DingTalk group request failed with HTTP {0}.,DingTalk group request failed with HTTP {0}.
+DingTalk returned an invalid group response.,DingTalk returned an invalid group response.
+DingTalk group rejected the message (code {0}); check robot security settings.,DingTalk group rejected the message (code {0}); check robot security settings.
+Select an enabled ERP user with a unique DingTalk UserId or mobile number.,Select an enabled ERP user with a unique DingTalk UserId or mobile number.
+"Private chat robots require AppKey, AppSecret and RobotCode.","Private chat robots require AppKey, AppSecret and RobotCode."
+The DingTalk channel and robot type must match.,The DingTalk channel and robot type must match.
+Webhook format is valid. No group message was sent.,Webhook format is valid. No group message was sent.
+Validate Webhook,Validate Webhook
+Send Test Group Message,Send Test Group Message
+ERP User,ERP User
+No enabled DingTalk Robot Config found: {0}.,No enabled DingTalk Robot Config found: {0}.
+Save the robot configuration before testing.,Save the robot configuration before testing.
+Validating Webhook...,Validating Webhook...
+DingTalk Robot Config is required for DingTalk notification channels.,DingTalk Robot Config is required for DingTalk notification channels.
+Draft Notifications Test,Draft Notifications Test
+Not permitted,Not permitted
+This is a test message from Draft Notifications.,This is a test message from Draft Notifications.
+DingTalk group request failed ({0}); check connectivity and retry status.,DingTalk group request failed ({0}); check connectivity and retry status.
+New sales order,New sales order
+Historical pending orders could not be loaded; check the sales order list.,Historical pending orders could not be loaded; check the sales order list.
+Historical orders pending financial review ({0}),Historical orders pending financial review ({0})
+{0} more pending orders.,{0} more pending orders.
+View all historical pending orders,View all historical pending orders
